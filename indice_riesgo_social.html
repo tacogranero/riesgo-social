@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Índice de Riesgo Social</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- CORRECCIÓN: URLs actualizadas para compatibilidad con GitHub Pages -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
@@ -13,12 +14,13 @@
             background: linear-gradient(135deg, #e0eafc, #cfdef3);
             padding: 40px 20px;
             color: #333;
+            min-height: 100vh;
         }
 
         .container {
             max-width: 960px;
             margin: 40px auto;
-            background: #ffffffdd;
+            background: rgba(255, 255, 255, 0.9);
             padding: 30px;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -39,13 +41,14 @@
 
         input[type="number"],
         select {
-            width: calc(100% - 22px);
-            padding: 10px;
+            width: 100%;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid #ccc;
             margin-top: 8px;
             font-size: 1em;
             box-sizing: border-box;
+            background: #f8f9fa;
         }
 
         .button-group {
@@ -78,8 +81,16 @@
             transform: translateY(0);
         }
 
+        #irsChartContainer {
+            display: none;
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
         canvas {
-            margin-top: 40px;
             max-height: 400px;
             display: block;
         }
@@ -87,11 +98,11 @@
         #recomendacion {
             margin-top: 30px;
             padding: 20px;
-            border-left: 6px solid; /* El color se define por JS */
+            border-left: 6px solid;
             border-radius: 10px;
             line-height: 1.6;
             font-size: 1.1em;
-            display: none; /* Oculto por defecto */
+            display: none;
         }
 
         #recomendacion.low {
@@ -133,7 +144,7 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            display: none; /* Oculto por defecto */
+            display: none;
         }
 
         th,
@@ -159,10 +170,12 @@
         .hidden {
             display: none !important;
         }
-        
-        /* Contenedor para gráfico */
-        #irsChartContainer {
+
+        .loading {
             display: none;
+            text-align: center;
+            padding: 20px;
+            color: #3498db;
         }
     </style>
 </head>
@@ -194,6 +207,8 @@
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
             </div>
         </form>
+
+        <div class="loading" id="cargando">Cargando datos...</div>
 
         <div id="irsChartContainer">
             <canvas id="irsChart"></canvas>
@@ -232,6 +247,7 @@
             const gastosInput = document.getElementById('gastos');
             const dependientesInput = document.getElementById('dependientes');
             const tipoViviendaSelect = document.getElementById('tipoVivienda');
+            const cargandoDiv = document.getElementById('cargando');
 
             // Elementos de resultado
             const recomendacionDiv = document.getElementById('recomendacion');
@@ -245,7 +261,7 @@
             const cargarExcelBtn = document.getElementById('cargarExcelBtn');
             const excelFileInput = document.getElementById('excelFileInput');
 
-            let myChart; // Variable para la instancia del gráfico
+            let myChart = null; // Variable para la instancia del gráfico
 
             // --- Función para Inicializar o Actualizar el Gráfico ---
             function updateChart(irsScore) {
@@ -277,15 +293,20 @@
                     myChart.data.datasets[0].backgroundColor[0] = color;
                     myChart.update();
                 } else {
-                    // Inicializar un nuevo gráfico si no existe
+                    // Destruir gráfico existente si hay uno
+                    if (Chart.getChart(irsChartCanvas)) {
+                        Chart.getChart(irsChartCanvas).destroy();
+                    }
+                    
+                    // Inicializar un nuevo gráfico
                     myChart = new Chart(ctx, {
                         type: 'bar',
                         data: {
                             labels: ['Índice de Riesgo Social'],
                             datasets: [{
                                 label: 'IRS',
-                                data: [irsScore], // Usar el IRS calculado inicialmente
-                                backgroundColor: ['rgba(54, 162, 235, 0.6)'], // Color por defecto
+                                data: [irsScore],
+                                backgroundColor: ['rgba(54, 162, 235, 0.6)'],
                                 borderColor: ['rgba(54, 162, 235, 1)'],
                                 borderWidth: 1
                             }]
@@ -296,7 +317,12 @@
                             scales: {
                                 y: {
                                     beginAtZero: true,
-                                    max: 100 // Escala máxima para el IRS
+                                    max: 100,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + '%';
+                                        }
+                                    }
                                 }
                             },
                             plugins: {
@@ -305,7 +331,17 @@
                                 },
                                 title: {
                                     display: true,
-                                    text: 'Valor del Índice de Riesgo Social (IRS)'
+                                    text: 'Valor del Índice de Riesgo Social (IRS)',
+                                    font: {
+                                        size: 16
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `Riesgo: ${context.parsed.y}%`;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -315,10 +351,10 @@
 
             // --- Función Principal de Cálculo del IRS ---
             function calcularIRS(event) {
-                event.preventDefault(); // Evita que el formulario se envíe y recargue la página
+                event.preventDefault();
 
-                // Validación mejorada: campos vacíos
-                if (!ingresosInput.value || !gastosInput.value) {
+                // Validación mejorada
+                if (!ingresosInput.value.trim() || !gastosInput.value.trim()) {
                     alert('Por favor, completa todos los campos obligatorios.');
                     return;
                 }
@@ -329,29 +365,42 @@
                 const tipoVivienda = tipoViviendaSelect.value;
 
                 // Validaciones básicas
-                if (isNaN(ingresos) || isNaN(gastos) || isNaN(dependientes) || ingresos < 0 || gastos < 0 || dependientes < 0) {
-                    alert('Por favor, ingresa valores numéricos válidos y no negativos para todos los campos.');
+                if (isNaN(ingresos) {
+                    alert('Ingresos no válidos. Por favor ingresa un número válido.');
+                    ingresosInput.focus();
+                    return;
+                }
+                
+                if (isNaN(gastos)) {
+                    alert('Gastos no válidos. Por favor ingresa un número válido.');
+                    gastosInput.focus();
+                    return;
+                }
+                
+                if (isNaN(dependientes)) {
+                    alert('Número de dependientes no válido. Por favor ingresa un número entero.');
+                    dependientesInput.focus();
                     return;
                 }
 
-                let irs = 0; // Inicializar el Índice de Riesgo Social
+                let irs = 0;
 
                 // 1. Componente de Ingresos vs. Gastos
                 if (ingresos === 0) {
-                    irs += 50; // Riesgo muy alto si no hay ingresos
+                    irs += 50;
                 } else if (gastos > ingresos) {
-                    irs += 40; // Gastos superan ingresos
+                    irs += 40;
                 } else {
                     const ratioGastoIngreso = gastos / ingresos;
                     if (ratioGastoIngreso >= 0.8) {
-                        irs += 25; // Más del 80% de ingresos se va en gastos
+                        irs += 25;
                     } else if (ratioGastoIngreso >= 0.6) {
-                        irs += 10; // Entre 60% y 80%
+                        irs += 10;
                     }
                 }
 
                 // 2. Componente de Dependientes
-                irs += dependientes * 5; // Cada dependiente añade 5 puntos de riesgo
+                irs += dependientes * 5;
 
                 // 3. Componente de Tipo de Vivienda
                 switch (tipoVivienda) {
@@ -364,17 +413,13 @@
                     case 'prestada':
                         irs += 5;
                         break;
-                    case 'propia':
-                    default:
-                        // No añade riesgo significativo por sí misma
-                        break;
                 }
 
-                // Limitar el IRS a un máximo de 100 para que el gráfico no se desborde
+                // Limitar el IRS a un máximo de 100
                 irs = Math.min(irs, 100);
 
-                // --- Mostrar Resultados ---
-                updateChart(irs); // Llama a la función que inicializa o actualiza el gráfico
+                // Mostrar Resultados
+                updateChart(irs);
                 mostrarRecomendaciones(irs);
             }
 
@@ -382,90 +427,101 @@
             function mostrarRecomendaciones(irs) {
                 recomendacionDiv.style.display = 'block';
                 alertaRojaDiv.style.display = 'none';
-                recomendacionDiv.className = ''; // Limpiar clases anteriores
-                recomendacionDiv.classList.add('recomendacion'); // Asegurar clase base
+                recomendacionDiv.className = 'recomendacion';
 
                 let textoRecomendacion = '';
                 if (irs < 20) {
-                    textoRecomendacion = 'Tu índice de riesgo social es **Bajo**. ¡Felicidades! Mantén una buena gestión de tus finanzas y considera ahorrar e invertir para el futuro.';
+                    textoRecomendacion = 'Tu índice de riesgo social es BAJO. ¡Felicidades! Mantén una buena gestión de tus finanzas y considera ahorrar e invertir para el futuro.';
                     recomendacionDiv.classList.add('low');
                 } else if (irs < 50) {
-                    textoRecomendacion = 'Tu índice de riesgo social es **Medio**. Es aconsejable revisar tus gastos y posiblemente buscar formas de aumentar tus ingresos o reducir dependencias para mejorar tu estabilidad.';
+                    textoRecomendacion = 'Tu índice de riesgo social es MEDIO. Es aconsejable revisar tus gastos y posiblemente buscar formas de aumentar tus ingresos o reducir dependencias para mejorar tu estabilidad.';
                     recomendacionDiv.classList.add('medium');
                 } else {
-                    textoRecomendacion = 'Tu índice de riesgo social es **Alto**. Es urgente que revises tu situación financiera. Busca asesoría profesional, evalúa tus gastos, y considera opciones para generar más ingresos o acceder a apoyos sociales.';
+                    textoRecomendacion = 'Tu índice de riesgo social es ALTO. Es urgente que revises tu situación financiera. Busca asesoría profesional, evalúa tus gastos, y considera opciones para generar más ingresos o acceder a apoyos sociales.';
                     alertaRojaDiv.style.display = 'block';
                     recomendacionDiv.classList.add('high');
                 }
-                recomendacionTexto.innerHTML = textoRecomendacion;
-                recomendacionDiv.classList.remove('hidden'); // Asegurar que sea visible
+                recomendacionTexto.textContent = textoRecomendacion;
             }
 
             // --- Funcionalidad de Carga de Excel ---
             cargarExcelBtn.addEventListener('click', () => {
-                excelFileInput.click(); // Simular clic en el input de tipo file
+                excelFileInput.click();
             });
 
             excelFileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
+                if (!file) return;
+
+                cargandoDiv.style.display = 'block';
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {
-                            type: 'array'
-                        });
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        if (workbook.SheetNames.length === 0) {
+                            throw new Error('El archivo no contiene hojas');
+                        }
+                        
                         const firstSheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[firstSheetName];
                         const json = XLSX.utils.sheet_to_json(worksheet);
-
-                        if (json.length > 0) {
-                            const row = json[0]; // Usar la primera fila de datos
-
-                            // Intentar poblar el formulario
-                            if (row.Ingresos !== undefined) ingresosInput.value = row.Ingresos;
-                            if (row.Gastos !== undefined) gastosInput.value = row.Gastos;
-                            if (row.Dependientes !== undefined) dependientesInput.value = row.Dependientes;
-                            if (row.Tipo_Vivienda !== undefined) {
-                                const viviendaValue = String(row.Tipo_Vivienda).toLowerCase();
-                                // Asegurarse de que el valor del Excel coincida con una opción del select
-                                if (['propia', 'hipoteca', 'alquilada', 'prestada'].includes(viviendaValue)) {
-                                    tipoViviendaSelect.value = viviendaValue;
-                                }
-                            }
-
-                            // Opcional: Mostrar gastos detallados si el Excel tiene más columnas
-                            gastosTableBody.innerHTML = ''; // Limpiar tabla
-                            let hasDetailedExpenses = false;
-                            for (const key in row) {
-                                // Evitar los campos ya mapeados y otros campos que no son gastos específicos
-                                if (!['Ingresos', 'Gastos', 'Dependientes', 'Tipo_Vivienda'].includes(key) && row[key] !== null && row[key] !== '') {
-                                    const tr = document.createElement('tr');
-                                    tr.innerHTML = `<td>${key}</td><td>$${parseFloat(row[key]).toFixed(2)}</td>`;
-                                    gastosTableBody.appendChild(tr);
-                                    hasDetailedExpenses = true;
-                                }
-                            }
-
-                            if (hasDetailedExpenses) {
-                                gastosTabla.classList.remove('hidden');
-                                detalleGastosDiv.classList.remove('hidden');
-                            } else {
-                                gastosTabla.classList.add('hidden');
-                                detalleGastosDiv.classList.add('hidden');
-                            }
-
-                            alert('Datos cargados correctamente desde Excel. Haz clic en "Calcular IRS" para ver resultados.');
-                        } else {
-                            alert('El archivo Excel está vacío o no contiene datos válidos. Verifica el formato.');
+                        
+                        if (json.length === 0) {
+                            throw new Error('La hoja de cálculo está vacía');
                         }
-                    };
-                    reader.onerror = (error) => {
-                        console.error('Error al leer el archivo:', error);
-                        alert('Hubo un error al leer el archivo Excel.');
-                    };
-                    reader.readAsArrayBuffer(file);
-                }
+                        
+                        const row = json[0];
+
+                        // Poblar formulario
+                        if (row.Ingresos !== undefined) ingresosInput.value = row.Ingresos;
+                        if (row.Gastos !== undefined) gastosInput.value = row.Gastos;
+                        if (row.Dependientes !== undefined) dependientesInput.value = row.Dependientes;
+                        
+                        if (row.Tipo_Vivienda !== undefined) {
+                            const viviendaValue = String(row.Tipo_Vivienda).toLowerCase();
+                            if (['propia', 'hipoteca', 'alquilada', 'prestada'].includes(viviendaValue)) {
+                                tipoViviendaSelect.value = viviendaValue;
+                            }
+                        }
+
+                        // Mostrar gastos detallados
+                        gastosTableBody.innerHTML = '';
+                        let hasDetailedExpenses = false;
+                        
+                        for (const key in row) {
+                            if (!['Ingresos', 'Gastos', 'Dependientes', 'Tipo_Vivienda'].includes(key) && 
+                                row[key] !== null && row[key] !== '') {
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `<td>${key}</td><td>$${parseFloat(row[key]).toFixed(2)}</td>`;
+                                gastosTableBody.appendChild(tr);
+                                hasDetailedExpenses = true;
+                            }
+                        }
+
+                        gastosTabla.style.display = hasDetailedExpenses ? 'table' : 'none';
+                        detalleGastosDiv.style.display = hasDetailedExpenses ? 'block' : 'none';
+                        
+                        alert('Datos cargados correctamente. Haz clic en "Calcular IRS" para ver resultados.');
+                    } catch (error) {
+                        console.error('Error al procesar Excel:', error);
+                        alert(`Error al procesar el archivo: ${error.message}`);
+                    } finally {
+                        cargandoDiv.style.display = 'none';
+                        excelFileInput.value = '';
+                    }
+                };
+                
+                reader.onerror = (error) => {
+                    console.error('Error al leer archivo:', error);
+                    alert('Error al leer el archivo. Asegúrate de que es un Excel válido.');
+                    cargandoDiv.style.display = 'none';
+                    excelFileInput.value = '';
+                };
+                
+                reader.readAsArrayBuffer(file);
             });
 
             // --- Event Listeners ---
