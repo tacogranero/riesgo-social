@@ -1,1 +1,76 @@
+html_content = """
+<!DOCTYPE html>
+<html lang="="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Índice de Riesgo Social (IRS) - Argentina">
+    <meta name="author" content="Gustavo Granero">
+    <title>Índice de Riesgo Social</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f9f9f9;
+            color: #333;
+        }
+        header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        main {
+            padding: 2rem;
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+        h1, h2 {
+            color: #0d6efd;
+        }
+        footer {
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.9rem;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Índice de Riesgo Social (IRS)</h1>
+        <p>Monitoreo automático del riesgo económico-social argentino</p>
+    </header>
+    <main>
+        <h2>¿Qué es el IRS?</h2>
+        <p>El <strong>Índice de Riesgo Social</strong> mide el nivel de presión económica sobre las familias argentinas en base a datos oficiales. Incluye variables como el ingreso modal, canasta básica total y alimentaria, inflación, tarifas, transporte, medicamentos y desempleo.</p>
+        
+        <h2>Datos Automáticos</h2>
+        <p>Este sistema utiliza datos en tiempo real desde APIs públicas como las del BCRA, INDEC y otras fuentes para calcular el IRS. El índice se actualiza periódicamente y ofrece alertas e indicadores clave para formular políticas públicas.</p>
 
+        <h2>Metodología</h2>
+        <p>IRS = (Gastos Totales / Ingreso Modal) * 100 + Inflación + Desempleo</p>
+        <p>Cuando supera el 80%, se recomienda intervenir con políticas progresistas: subsidios, fortalecimiento del empleo, y mejora del poder adquisitivo.</p>
+
+        <h2>Visualización</h2>
+        <p>La aplicación incluye gráficos dinámicos y exportación de resultados.</p>
+
+        <h2>Repositorio</h2>
+        <p><a href="https://github.com/tacogranero/riesgo-social" target="_blank">Ver en GitHub</a></p>
+    </main>
+    <footer>
+        Desarrollado por Gustavo Granero · © 2025 · Licencia MIT
+    </footer>
+</body>
+</html>
+"""
+
+# Guardar el archivo HTML para publicación en GitHub Pages
+output_path = Path("/mnt/data/index.html")
+output_path.write_text(html_content, encoding="utf-8")
+output_path.name
