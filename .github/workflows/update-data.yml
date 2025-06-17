@@ -1,0 +1,33 @@
+name: Actualización diaria de datos del IRS
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # Ejecuta todos los días a las 3 AM UTC
+  workflow_dispatch:     # También permite ejecutar manualmente
+
+jobs:
+  actualizar-datos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Ejecutar script de actualización
+        run: node src/actualizarDatos.js
+
+      - name: Commit y push si hay cambios
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          git add .
+          git commit -m "🔄 Actualización automática diaria de datos" || echo "Sin cambios"
+          git push
